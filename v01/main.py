@@ -14,5 +14,3 @@ match(type):
         print("ASTM 標準共有", len(OriginTable_ASTM), "筆資料")
         
         Crawler_ASTM.run(OriginTable_ASTM)
-            
-            # pdTable.loc[pdTable["Standard Number"]==standard, "Current Version"] = Crawler_ASTM.run(standard)
