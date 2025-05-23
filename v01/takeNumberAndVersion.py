@@ -6,62 +6,95 @@ def splitStandardNumberAndVersion(standard, divider):
     standardVersion = standard.split(divider)[1]
     return(standardNumber, standardVersion)
 
-def run(link, _type):
-    inputStandardNumbers = pd.read_excel(link, sheet_name=_type, usecols=["Document Number"])
-    print("從 excel 取得標準編號:")
-    print(inputStandardNumbers)
-    print(f"一共有{len(inputStandardNumbers)}筆資料")
-
-    print("分析標準編號與版本")
-    newStandardNumbers = inputStandardNumbers
-    splitedNumberList = []
-    splitedVersionList = []
-
+def getStandardNumbersAndVersion(documentNumbers, originalVersions, _type):
+    print("正在從 excel 取得標準編號及收錄版本...")
+    print("共",len(documentNumbers),"筆")
+    print(documentNumbers)
+    standardNumbers = []
+    standardVersions = []
+    
     match(_type):
         case "ISO":
-            for standard in newStandardNumbers["Document Number"]:    
-                print()
-                if(":" in standard):
+            i=0
+            for standard in documentNumbers:
+                if ":" in standard:
+                    # 包含年份/版本
                     standardNumber, standardVersion = splitStandardNumberAndVersion(standard, ":")
-                    newStandardNumbers.loc[newStandardNumbers["Document Number"]==standard, "Standard Number"] = standardNumber
-                    newStandardNumbers.loc[newStandardNumbers["Document Number"]==standard, "Standard Version"] = standardVersion
-                elif("：" in standard):
+                elif "：" in standard:
+                    # 包含年份/版本
                     standardNumber, standardVersion = splitStandardNumberAndVersion(standard, "：")
-                    newStandardNumbers.loc[newStandardNumbers["Document Number"]==standard, "Standard Number"] = standardNumber
-                    newStandardNumbers.loc[newStandardNumbers["Document Number"]==standard, "Standard Version"] = standardVersion
-
+                else: 
+                    # 不包含年份/版本
+                    standardNumber = standard
+                    standardVersion = originalVersions[i]
+                standardNumbers.append(str(standardNumber))
+                standardVersions.append(str(standardVersion))
+                i+=1
+                print("完成第",i,"筆 / 共",len(documentNumbers),"筆")
+                print(">> 取得", standardNumber, standardVersion)
+            print(_type,"擷取完成!")
+            
         case "ASTM":
-            for standard in newStandardNumbers["Document Number"]:
-                print(standard)
-                # 判斷編碼登記格式
-                if standard.startswith("ASTM-"):
-                    print("[[ASTM修正]]")
-                    standard = standard.replace("ASTM-", "ASTM ")
-                elif standard.startswith("ASTM_"):
-                    print("[[ASTM修正]]")
-                    standard = standard.replace("ASTM_", "ASTM ")
+            i=0
+            for standard in documentNumbers:
+                try: 
+                    if "-" in standard:
+                        # 包含年份/版本
+                        # 判斷編碼登記格式
+                        if standard.startswith("ASTM-"):
+                            print("[[ASTM修正]]")
+                            standard = standard.replace("ASTM-", "ASTM ")
+                        elif standard.startswith("ASTM_"):
+                            print("[[ASTM修正]]")
+                            standard = standard.replace("ASTM_", "ASTM ")
+                        if standard.count("-")!=1:
+                            n = standard.find("-") # 取得第1個 "-" 的位置
+                            while standard[n+1].isalpha():
+                                standard = standard.replace("-", "/", 1)
+                                n = standard.find("-")
+                            
+                    standardNumber, standardVersion = splitStandardNumberAndVersion(standard, "-")
+                
+                    #判斷版本登記格式
+                    if " R" in standardVersion:
+                        if "e" in standardVersion:
+                            standardVersion = standardVersion.replace(" R", "(").replace("e", ")e")
+                        else: standardVersion = standardVersion.replace(" R", "(")+")"      
+                except Exception as e:
+                    standardNumber = standard
+                    print("Standard Number is", standardNumber)
                     
-                if standard.count("-")!=1:
-                    i = standard.find("-") # 取得第1個 "-" 的位置
-                    while standard[i+1].isalpha():
-                        standard = standard.replace("-", "/", 1)
-                        i = standard.find("-")
-                
-                standardNumber, standardVersion = splitStandardNumberAndVersion(standard, "-")
-                print("分割完成!! 取得", standardNumber, standardVersion)
-                
-                # 判斷版本登記格式
-                if " R" in standardVersion:
-                    if "e" in standardVersion:
-                        standardVersion = standardVersion.replace(" R", "(").replace("e", ")e")
-                    else: standardVersion = standardVersion.replace(" R", "(")+")"
-                        
-                splitedNumberList.append(standardNumber)
-                splitedVersionList.append(standardVersion)
-
-    newStandardNumbers["Standard Number"] = splitedNumberList
-    newStandardNumbers["Standard Version"] = splitedVersionList
-    print("現在取得的資料為: ", _type)
-    print(newStandardNumbers)
+                standardNumbers.append(str(standardNumber))
+                standardVersions.append(str(standardVersion))
+                    
+                i+=1
+                print("完成第",i,"筆 / 共",len(documentNumbers),"筆")
+                print(">> 取得", standardNumber, standardVersion)
+            print(_type,"擷取完成!")
+                    
+    return standardNumbers, standardVersions      
+            
     
-    return newStandardNumbers
+
+def run(link, _type):
+    if ".xlsx" in link:
+        sheetData = pd.read_excel(link, sheet_name=_type, engine="openpyxl")
+    elif ".xls" in link:
+        sheetData = pd.read_excel(link, sheet_name=_type, engine="xlrd")
+    else: print("檔案格式錯誤")
+        
+    for col in sheetData:
+        if "Document Number" in col:
+            originalDocumentNumbers = col
+        if "Version" in col:
+            originalStandardVersions = col
+
+    standardNumbers, standardVersions = getStandardNumbersAndVersion(sheetData[originalDocumentNumbers], sheetData[originalStandardVersions], _type)
+
+    print("回傳兩個檔資料格式分別為", type(standardNumbers), type(standardVersions))
+    newTable = pd.DataFrame()
+    newTable["Standard Number"] = standardNumbers
+    newTable["Registed Version"] = standardVersions
+    print(newTable)
+    print("=== 離開 takdNumberAndVersion.py ===")
+    return newTable
