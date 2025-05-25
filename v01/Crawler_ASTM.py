@@ -90,6 +90,15 @@ def run(originalTable):
     print(newTable)  
       
     print("準備輸出 excel")
-    while is_excel_file_open(f"檔案_{date.today()}.xlsx"):
-        input("輸出 excel 開啟中，無法存檔!!關閉檔案後，隨意輸入，再次嘗試存檔。")
-    newTable.to_excel(f"檔案_{date.today()}.xlsx", sheet_name="ASTM", index=False) 
+    excel_path = f"法規標準更新檢查_{date.today()}.xlsx"
+    if os.path.exists(excel_path):
+        print("檔案存在, 準備寫入...")
+        while is_excel_file_open(excel_path):
+            input("輸出 excel 開啟中，無法存檔!!關閉檔案後，隨意輸入，再次嘗試存檔。")
+        with pd.ExcelWriter(excel_path, engine="openpyxl", mode="a", if_sheet_exists="new") as writer: newTable.to_excel(writer, sheet_name="ASTM", index=False)
+    else:
+        print(f"建立: {excel_path}")
+        newTable.to_excel(excel_path, sheet_name="ASTM", index=False)
+    
+    
+    print("已輸出 excel")
