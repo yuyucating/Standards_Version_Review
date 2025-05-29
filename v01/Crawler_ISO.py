@@ -42,7 +42,7 @@ def MainSearching(driver, originTable, i, SearchingBox, submitBtn, standardNumbe
             isUpdateList.append("-")
         else: 
             searchedStandard = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, f"//a[starts-with(normalize-space(.), '{standardNumber}:')]")))
+                EC.presence_of_element_located((By.XPATH, f"//a[starts-with(normalize-space(.), '{standardNumber}:') and not(contains(., 'Amd')) and not(contains(., 'Cor'))]")))
 
             print(f"找到 {standardNumber} !!")
             currentVersion = searchedStandard.get_attribute("textContent").rsplit(":",1)[1]
