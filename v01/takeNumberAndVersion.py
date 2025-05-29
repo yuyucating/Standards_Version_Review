@@ -1,15 +1,16 @@
 import pandas as pd
 
 def splitStandardNumberAndVersion(standard, divider):
-    print(standard, "切分資料量: ", len(standard.split(divider)))
-    standardNumber = standard.split(divider)[0]
-    standardVersion = standard.split(divider)[1]
+    # print("切分資料量: ", len(standard.rsplit(divider)))
+    standardNumber = standard.rsplit(divider,1)[0]
+    standardVersion = standard.rsplit(divider,1)[1]
     return(standardNumber, standardVersion)
 
 def getStandardNumbersAndVersion(documentNumbers, originalVersions, _type):
     print("正在從 excel 取得標準編號及收錄版本...")
     print("共",len(documentNumbers),"筆")
     print(documentNumbers)
+    standardTypes = []
     standardNumbers = []
     standardVersions = []
     
@@ -17,21 +18,32 @@ def getStandardNumbersAndVersion(documentNumbers, originalVersions, _type):
         case "ISO":
             i=0
             for standard in documentNumbers:
-                if ":" in standard:
-                    # 包含年份/版本
-                    standardNumber, standardVersion = splitStandardNumberAndVersion(standard, ":")
-                elif "：" in standard:
-                    # 包含年份/版本
-                    standardNumber, standardVersion = splitStandardNumberAndVersion(standard, "：")
-                else: 
-                    # 不包含年份/版本
-                    standardNumber = standard
-                    standardVersion = originalVersions[i]
-                standardNumbers.append(str(standardNumber))
-                standardVersions.append(str(standardVersion))
+                # 格式化標準編號與版本
+                if "amd" in str(standard).lower():
+                    if "：" in standard:
+                        standard = standard.replace("：", ":")
+                    splitMark = standard.upper().find("AMD")
+                    standard = standard[:splitMark-1]
+                    standardTypes.append("Amd")
+                elif "cor" in str(standard).lower():
+                    if "：" in standard:
+                        standard = standard.replace("：", ":")
+                    splitMark = standard.upper().find("COR")
+                    standard = standard[:splitMark-1]
+                    standardTypes.append("Cor")
+                else:
+                    if "：" in str(standard):
+                        standard = standard.replace("：", ":")
+                        standard = standard.split(":")[0]
+                    print(standard, ">> main article")
+                    standardTypes.append("Main")
+                try:
+                    standardVersion = int(originalVersions[i])
+                except Exception as e:
+                    print("nan PASS!!!")              
+                standardNumbers.append(str(standard).strip())
+                standardVersions.append(str(standardVersion).strip())
                 i+=1
-                print("完成第",i,"筆 / 共",len(documentNumbers),"筆")
-                print(">> 取得", standardNumber, standardVersion)
             print(_type,"擷取完成!")
             
         case "ASTM":
@@ -64,19 +76,20 @@ def getStandardNumbersAndVersion(documentNumbers, originalVersions, _type):
                     standardNumber = standard
                     print("Standard Number is", standardNumber)
                     
+                standardTypes.append("Main")
                 standardNumbers.append(str(standardNumber))
                 standardVersions.append(str(standardVersion))
                     
                 i+=1
-                print("完成第",i,"筆 / 共",len(documentNumbers),"筆")
                 print(">> 取得", standardNumber, standardVersion)
             print(_type,"擷取完成!")
                     
-    return standardNumbers, standardVersions      
+    return standardTypes, standardNumbers, standardVersions      
             
     
 
 def run(link, _type):
+    print("=== 執行 takdNumberAndVersion.py ===")
     if ".xlsx" in link:
         sheetData = pd.read_excel(link, sheet_name=_type, engine="openpyxl")
     elif ".xls" in link:
@@ -89,10 +102,10 @@ def run(link, _type):
         if "Version" in col:
             originalStandardVersions = col
 
-    standardNumbers, standardVersions = getStandardNumbersAndVersion(sheetData[originalDocumentNumbers], sheetData[originalStandardVersions], _type)
+    standardTypes, standardNumbers, standardVersions = getStandardNumbersAndVersion(sheetData[originalDocumentNumbers], sheetData[originalStandardVersions], _type)
 
-    print("回傳兩個檔資料格式分別為", type(standardNumbers), type(standardVersions))
     newTable = pd.DataFrame()
+    newTable["Type"] = standardTypes
     newTable["Standard Number"] = standardNumbers
     newTable["Registed Version"] = standardVersions
     print(newTable)

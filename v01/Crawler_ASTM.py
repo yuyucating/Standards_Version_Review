@@ -1,4 +1,5 @@
 import selenium
+import pandas as pd
 import os
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -79,7 +80,7 @@ def run(originalTable):
                 print("...沒有執行成功")
                 currentVersionList.append("未成功執行")
                 isUpdateList.append("未成功執行")
-            
+        print("完成第",i,"筆 / 共",len(originalTable["Standard Number"]),"筆")
         i+=1
             
     driver.quit()
