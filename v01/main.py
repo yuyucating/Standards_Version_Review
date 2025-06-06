@@ -3,6 +3,7 @@ import time
 import takeNumberAndVersion
 import Crawler_ASTM
 import Crawler_ISO
+import Crawler_YY
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
@@ -33,6 +34,8 @@ def run(link, _type):
             Crawler_ASTM.run(OriginTable)
         case "ISO":
             Crawler_ISO.run(OriginTable)
+        case "YY":
+            Crawler_YY.run(OriginTable)
     timeEnd = time.time()
     durationTime = timeEnd-timeStart
     print(f"執行時間: {durationTime//60}分{durationTime%60}秒")
@@ -48,7 +51,7 @@ btn_readExcel.pack()
 frame_standardType = tk.Frame(window).pack(pady=5, padx=20)
 label_chooseStandardType = ttk.Label(frame_standardType, text="選擇檢查標準類型:").pack(anchor="w", padx=10)
 
-standardtypeList = ['ASTM', 'ISO', '3', '4','5','6','7','8','9','10','11','12', '13', '14']
+standardtypeList = ['ASTM', 'ISO', 'YY', '4','5','6','7','8','9','10','11','12', '13', '14']
 num = len(standardtypeList)
 frame_typeBtn = tk.Frame(frame_standardType)
 frame_typeBtn.pack(padx=10)
