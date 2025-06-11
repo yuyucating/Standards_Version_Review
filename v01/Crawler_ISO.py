@@ -143,7 +143,7 @@ def run(originTable):
     if os.path.exists(excel_path):
         print("檔案存在, 準備寫入...")
         while is_excel_file_open(excel_path):
-            input("輸出 excel 開啟中，無法存檔!!關閉檔案後，隨意輸入，再次嘗試存檔。")
+            input("輸出 excel 開啟中，無法存檔!!關閉檔案後按 Enter 嘗試存檔。")
         with pd.ExcelWriter(excel_path, engine="openpyxl", mode="a", if_sheet_exists="new") as writer: newTable.to_excel(writer, sheet_name="ISO", index=False)
     else:
         print(f"建立: 檔案_{date.today()}.xlsx")

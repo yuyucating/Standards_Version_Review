@@ -83,7 +83,23 @@ def getStandardNumbersAndVersion(documentNumbers, originalVersions, _type):
                 i+=1
                 print(">> 取得", standardNumber, standardVersion)
             print(_type,"擷取完成!")
-                    
+        case "YY":            
+            for standard in documentNumbers:
+                try:
+                    # 辨別標準類型是否包含空格(Typo)
+                    if len(standard.split(" ")) ==3:
+                        standard = standard.split(" ")[0]+standard.split(" ")[1]+" "+standard.split(" ")[2]
+                    if isinstance(standard, str) and "／" in standard:
+                        standard = standard.replace("／", "/")
+                        standardTypes.append("YY/T")
+                    elif isinstance(standard, str) and "/" in standard:
+                        standardTypes.append("YY/T")
+                    else: standardTypes.append("YY")
+                    standardNumbers.append(standard)
+                except:
+                    pass
+            standardVersions = originalVersions
+                
     return standardTypes, standardNumbers, standardVersions      
             
     

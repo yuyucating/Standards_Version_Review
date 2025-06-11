@@ -8,6 +8,7 @@ from selenium.webdriver.support import expected_conditions as EC
 import pandas as pd
 from datetime import datetime
 from datetime import date
+import traceback
 
 def is_excel_file_open(file_path):
     try:
@@ -21,55 +22,124 @@ def crawler(driver, SearchingBox, submitBtn, standardList, registedVersionList, 
     SearchingBox.clear()
     SearchingBox.send_keys(standard)
     submitBtn.click()
-    WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.ID, "hbtable"))
-    )
-    print("開始搜尋: "+standard)
+    print("開始搜尋: "+ str(standard))
 
-    # 找到 <tbody> 元素
-    # tbody = WebDriverWait(driver, 10).until(
-    #     EC.presence_of_element_located((By.TAG_NAME, "tbody")))
-    tbody = driver.find_element(By.ID, "hbtable").find_element(By.TAG_NAME, "tbody")
+    try:
+            # 找到 <tbody> 元素
+        WebDriverWait(driver, 10).until(
+            EC.text_to_be_present_in_element((By.ID, "hbtable"), standard)
+            )
 
-    # 找出所有列（tr）
-    rows = tbody.find_elements(By.TAG_NAME, "tr")
-    print(standard, "有", len(rows), "行")
+        tbody =  driver.find_element(By.ID, "hbtable").find_element(By.TAG_NAME, "tbody")
+        
+        # 找出所有列（tr）
+        rows = tbody.find_elements(By.TAG_NAME, "tr")
+        print(standard, "有", len(rows), "行")
 
-    for i in range(len(rows)):
-        try:
-            # 每次重新定位 row，避免舊元素失效
-            fresh_row = WebDriverWait(driver, 5).until(
-                EC.presence_of_all_elements_located((By.TAG_NAME, "tr")))[i]
-            cells = fresh_row.find_elements(By.TAG_NAME, "td")
-            data = []
-            for cell in cells:
-                data.append(cell.text.strip())
+    
+        for i, row in enumerate(rows):
+            # try:
+            cells = row.find_elements(By.TAG_NAME, "td")
+            data = [cell.text.strip() for cell in cells]
+            
+            if len(data) < 7:
+                print(f"資料不足：{data}")
+                continue
+            
             print("。。", data)
             _temp = data[1].replace("—", "-").replace("–", "-").replace("\xa0", " ").strip()
+            print("抓抓號碼", _temp[:-5],"\n註冊號碼", standard)
+            if str(_temp[:-5]) != str(standard):
+                print("不是", standard,", 跳過!!!")
+                continue
             currentVersion = _temp[-4:]
             establishDate = data[6]
             d = establishDate.split("-")
             print("Registed Version:", registedVersion, "\nCurrent Version:", currentVersion)
-            if str(currentVersion) != registedVersion:
+            
+            if str(currentVersion) != str(registedVersion):
                 today = date.today()
                 if today >= date(int(d[0]), int(d[1]), int(d[2])):
                     print("!!UPDATE!!")
                     updateList.append("!!UPDATE!!")
-                else: 
+                else:
                     print("Update in nearly future")
                     updateList.append("Update in nearly future.")
+                standardList.append(standard)
+                registedVersionList.append(registedVersion)
+                versionList.append(currentVersion)
             else:
                 updateList.append("-")
+                standardList.append(standard)
+                registedVersionList.append(registedVersion)
+                versionList.append(currentVersion)
+                break
+    except Exception as e:
+        print("查不到 換一個標準類型進行搜尋...")
+        splited = standard.split(" ")
+        if "T" in splited:
+            _standard = "YY "+splited[1]
+        else:
+            _standard = "YY/T "+splited[1]
+        SearchingBox.clear()
+        SearchingBox.send_keys(_standard)
+        submitBtn.click()
+        print("開始搜尋: "+ str(_standard))
+        try:
+            WebDriverWait(driver, 10).until(
+                EC.text_to_be_present_in_element((By.ID, "hbtable"), _standard)
+                )
+
+            tbody =  driver.find_element(By.ID, "hbtable").find_element(By.TAG_NAME, "tbody")
+            
+            # 找出所有列（tr）
+            rows = tbody.find_elements(By.TAG_NAME, "tr")
+            print(_standard, "有", len(rows), "行")
+
+        
+            for i, row in enumerate(rows):
+                # try:
+                cells = row.find_elements(By.TAG_NAME, "td")
+                data = [cell.text.strip() for cell in cells]
+                
+                if len(data) < 7:
+                    print(f"資料不足：{data}")
+                    continue
+                
+                print("。。", data)
+                _temp = data[1].replace("—", "-").replace("–", "-").replace("\xa0", " ").strip()
+                print("抓抓號碼", _temp[:-5],"\n註冊號碼", standard)
+                if _temp[:-5] != standard:
+                    print("不是", standard,", 跳過!!!")
+                currentVersion = _temp[-4:]
+                establishDate = data[6]
+                d = establishDate.split("-")
+                print("Registed Version:", registedVersion, "\nCurrent Version:", currentVersion)
+                
+                if str(currentVersion) != str(registedVersion):
+                    today = date.today()
+                    if today >= date(int(d[0]), int(d[1]), int(d[2])):
+                        print("!!UPDATE!! 且更新為", _standard)
+                        updateList.append("!!UPDATE!! 且更新為 "+_standard)
+                    else:
+                        print(_standard, "update in nearly future")
+                        updateList.append(_standard+" update in nearly future.")
+                    standardList.append(standard)
+                    registedVersionList.append(registedVersion)
+                    versionList.append(currentVersion)
+                else:
+                    updateList.append("更換標準類型, 但未進行改版: "+_standard)
+                    standardList.append(standard)
+                    registedVersionList.append(registedVersion)
+                    versionList.append(currentVersion)
+                    break
+        except Exception as e:
             standardList.append(standard)
             registedVersionList.append(registedVersion)
-            versionList.append(currentVersion)
-
-            
-        except Exception as e:
-            pass
-    
-    print(len(standardList), len(registedVersionList), len(versionList), len(updateList))
+            versionList.append("查無資料")
+            updateList.append("請自行確認是否廢止")
     return pd.DataFrame({"Standard Number":standardList, "Registed Version": registedVersionList, "Current Version": versionList, "Update": updateList})
+        
     
 
 def run(originTable):
@@ -95,6 +165,7 @@ def run(originTable):
     
     for i in range(len(originTable)):
         newTable = crawler(driver, SearchingBox, submitBtn, standardList, registedVersionList, versionList, updateList, standard[i], registedVersion[i])
+        print(f"完成第{i}個/總共{len(originTable)+1}個")
     driver.quit()
     
     print(newTable)
@@ -104,7 +175,7 @@ def run(originTable):
     if os.path.exists(excel_path):
         print("檔案存在, 準備寫入...")
         while is_excel_file_open(excel_path):
-            input("輸出 excel 開啟中，無法存檔!!關閉檔案後，隨意輸入，再次嘗試存檔。")
+            input("輸出 excel 開啟中，無法存檔!!關閉檔案後按 Enter 嘗試存檔。")
         with pd.ExcelWriter(excel_path, engine="openpyxl", mode="a", if_sheet_exists="new") as writer: newTable.to_excel(writer, sheet_name="YY", index=False)
     else:
         print(f"建立: 檔案_{date.today()}.xlsx")
